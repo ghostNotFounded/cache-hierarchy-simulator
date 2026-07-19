@@ -1,6 +1,14 @@
-title               = "Cache Hierarchy Simulator"
-
 [L1]
+level               = "L1"
+sets_in_cache       = 2
+blocks_per_set      = 2
+bytes_per_block     = 4
+write_allocate      = true
+write_through       = true
+eviction            = "fifo"
+
+[L2]
+level               = "L2"
 sets_in_cache       = 2
 blocks_per_set      = 2
 bytes_per_block     = 4
