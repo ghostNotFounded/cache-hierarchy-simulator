@@ -8,6 +8,16 @@ class cacheLevel {
  public:
   cacheLevel(const toml::table& cacheConfig);
 
+  std::string getCacheLevel() const;
+  int getSetsInCache() const;
+  int getBlocksPerSet() const;
+  int getBytesPerBlock() const;
+
+  bool getWriteAllocate() const;
+  bool getWriteThrough() const;
+
+  evictionPolicies getEvictionPolicy() const;
+
  private:
   std::string level;
 

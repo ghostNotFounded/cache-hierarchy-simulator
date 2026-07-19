@@ -37,3 +37,13 @@ cacheLevel::cacheLevel(const toml::table& cacheConfig) {
     throw std::runtime_error("Configuration Error [" + level +
                              ".eviction]: expected 'lru' or 'fifo'.");
 }
+
+std::string cacheLevel::getCacheLevel() const { return level; }
+int cacheLevel::getSetsInCache() const { return setsInCache; }
+int cacheLevel::getBlocksPerSet() const { return blocksPerSet; }
+int cacheLevel::getBytesPerBlock() const { return bytesPerBlock; }
+
+bool cacheLevel::getWriteAllocate() const { return writeAllocate; }
+bool cacheLevel::getWriteThrough() const { return writeThrough; }
+
+evictionPolicies cacheLevel::getEvictionPolicy() const { return eviction; }
