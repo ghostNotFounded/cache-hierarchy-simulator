@@ -1,50 +1,36 @@
-#include <bit>
-#include <iostream>
-#include <stdexcept>
-#include <string>
-
 #include "cache.hpp"
+#include "globals.hpp"
+#include "traces.hpp"
 
-int main() {
-  try {
-    auto config = toml::parse_file("config.toml");
+cacheHierarchy* hierarchy = nullptr;
 
-    std::vector<cacheLevel> cacheHierarchy;
-
-    for (int level = 1;; ++level) {
-      std::string section = "L" + std::to_string(level);
-
-      auto* table = config[section].as_table();
-
-      // Missing cache level
-      if (!table) {
-        if (level == 1) {
-          throw std::runtime_error(
-              "Configuration Error: L1 cache configuration is missing.");
-        }
-
-        // Check if any later level exists
-        std::string nextSection = "L" + std::to_string(level + 1);
-
-        if (config[nextSection]) {
-          throw std::runtime_error(
-              "Configuration Error: Found '" + nextSection + "' but '" +
-              section + "' is missing. Cache levels must be contiguous.");
-        }
-
-        break;
-      }
-
-      cacheHierarchy.emplace_back(*table);
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        std::cout << "Usage: " << argv[0] << " <traces>.trace\n";
+        return 1;
     }
 
-    std::cout << "Successfully created " << cacheHierarchy.size()
-              << " cache level(s).\n";
+    std::string traceFile = std::string(argv[1]);
 
-  } catch (const std::exception& e) {
-    std::cerr << e.what() << '\n';
-    return 1;
-  }
+    if (!traceFile.ends_with(".trace")) {
+        std::cout << "Usage: " << argv[0] << " <traces>.trace\n";
+        return 1;
+    }
 
-  return 0;
+    try {
+        auto config = toml::parse_file("config.toml");
+        hierarchy = new cacheHierarchy(config);
+
+        std::cout << "Successfully created "
+                  << hierarchy->getCacheLevels().size() << " cache level(s).\n";
+
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
+        return 1;
+    }
+
+    TraceHandler traceHandler;
+    traceHandler.readTraces(traceFile);
+
+    return 0;
 }
