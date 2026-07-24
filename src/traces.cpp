@@ -3,7 +3,10 @@
 #include "cache.hpp"
 #include "globals.hpp"
 
-void TraceHandler::readTraces(const std::string& traceFile) {
+TraceHandler::TraceHandler(const std::string& traceFile)
+    : traceFile(traceFile) {}
+
+void TraceHandler::readTraces() {
     std::ifstream traceFileStream(traceFile);
     if (!traceFileStream.is_open()) {
         std::cerr << "Error: Could not open trace file '" << traceFile
@@ -22,9 +25,9 @@ void TraceHandler::readTraces(const std::string& traceFile) {
 
         TraceOperation opType;
 
-        if (std::tolower(operation) == 's') {
+        if (std::tolower(operation) == 'l') {
             opType = TraceOperation::READ;
-        } else if (std::tolower(operation) == 'l') {
+        } else if (std::tolower(operation) == 's') {
             opType = TraceOperation::WRITE;
         } else {
             std::cerr << "Error: Invalid operation '" << operation
@@ -33,8 +36,16 @@ void TraceHandler::readTraces(const std::string& traceFile) {
         }
 
         if (hierarchy) {
-            hierarchy->handleTrace(opType, address,
-                                   instructionsSinceLastAccess);
+            std::vector<int> stats = hierarchy->handleTrace(
+                opType, address, instructionsSinceLastAccess);
+
+            totalLoads += stats[0];
+            totalStores += stats[1];
+            loadHits += stats[2];
+            loadMisses += stats[3];
+            storeHits += stats[4];
+            storeMisses += stats[5];
+            totalCycles += stats[6];
         } else {
             std::cerr << "Error: Cache hierarchy is not initialized.\n";
             exit(1);
