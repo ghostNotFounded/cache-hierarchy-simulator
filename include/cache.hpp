@@ -12,7 +12,7 @@
 enum evictionPolicies { LRU, FIFO };
 
 struct CacheBlock {
-    uint64_t tag;
+    uint32_t tag;
     bool dirty;
     bool valid;
     int timestamp;
@@ -22,12 +22,10 @@ class cacheLevel {
    public:
     cacheLevel(const toml::table& cacheConfig);
 
-    std::string getCacheLevel() const;
+    std::string getCacheLevel() const { return level; };
     std::vector<std::vector<CacheBlock>>& getCache() { return cacheSets; };
 
     void updateTimestamp(int instructionsSinceLastAccess);
-
-    bool setCacheBlock(int index, uint64_t tag, TraceOperation op);
 
     int getBlockOffsetBits() const { return blockOffsetBits; }
     int getSetIndexBits() const { return setIndexBits; }
@@ -66,6 +64,8 @@ class cacheHierarchy {
    public:
     cacheHierarchy(const toml::table& config);
     ~cacheHierarchy() = default;
+
+    bool setCacheBlock(int cacheLevel, uint32_t address, CacheBlock block);
 
     void updateBlockTimestamps(int instructionsSinceLastAccess) {
         for (auto& level : cacheLevels) {

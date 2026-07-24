@@ -3,19 +3,29 @@ address_bits        = 32
 [L1]
 level               = "L1"
 cycles              = 1
-sets_in_cache       = 256
-blocks_per_set      = 4
-bytes_per_block     = 16
+sets_in_cache       = 64          # 32KB / (8-way * 64B)
+blocks_per_set      = 8           # 8-way associative
+bytes_per_block     = 64
 write_allocate      = true
-write_through       = false
-eviction            = "fifo"
+write_through       = false       # Write-back
+eviction            = "LRU"
 
-# [L2]
-# level               = "L2"
-# cycles              = 3
-# sets_in_cache       = 2
-# blocks_per_set      = 2
-# bytes_per_block     = 4
+[L2]
+level               = "L2"
+cycles              = 4
+sets_in_cache       = 1024        # 512KB / (8-way * 64B)
+blocks_per_set      = 8           # 8-way associative
+bytes_per_block     = 64
+write_allocate      = true
+write_through       = false       # Write-back
+eviction            = "LRU"
+
+# [L3]
+# level               = "L3"
+# cycles              = 12
+# sets_in_cache       = 8192        # 8MB / (16-way * 64B)
+# blocks_per_set      = 16          # 16-way associative (more associativity for larger cache)
+# bytes_per_block     = 64
 # write_allocate      = true
-# write_through       = true
-# eviction            = "fifo"
+# write_through       = false       # Write-back
+# eviction            = "LRU"

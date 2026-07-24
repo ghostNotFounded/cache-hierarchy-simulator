@@ -41,40 +41,31 @@ void cacheLevel::updateTimestamp(int instructionsSinceLastAccess) {
 std::vector<int> cacheHierarchy::handleTrace(TraceOperation op,
                                              const std::string& addressStr,
                                              int instructionsSinceLastAccess) {
-    uint64_t address = std::stoull(addressStr, nullptr, 16);
-
-    auto toBinaryString = [](uint64_t value, int numBits) {
-        if (numBits <= 0) return std::string("0");
-        std::string binary = "";
-        for (int i = numBits - 1; i >= 0; i--) {
-            binary += ((value >> i) & 1) ? '1' : '0';
-        }
-        return binary;
-    };
+    uint32_t address = std::stoull(addressStr, nullptr, 16);
 
     updateBlockTimestamps(instructionsSinceLastAccess);
 
     bool found = false;
     int cycles = 0;
     for (auto& level : cacheLevels) {
-        uint64_t tempAddr = address;
+        uint32_t tempAddr = address;
 
         int offsetBits = level.getBlockOffsetBits();
-        uint64_t blockOffset = tempAddr & ((1ULL << offsetBits) - 1);
         tempAddr >>= offsetBits;
 
         int indexBits = level.getSetIndexBits();
-        uint64_t index = tempAddr & ((1ULL << indexBits) - 1);
+        uint32_t index = tempAddr & ((1ULL << indexBits) - 1);
         tempAddr >>= indexBits;
 
         int tagBits = 32 - offsetBits - indexBits;
-        uint64_t tag = tempAddr & ((1ULL << tagBits) - 1);
+        uint32_t tag = tempAddr & ((1ULL << tagBits) - 1);
 
         auto& set = level.getCache()[index];
         for (auto& block : set) {
             if (block.valid && block.tag == tag) {
                 found = true;
                 if (op == TraceOperation::WRITE) block.dirty = true;
+                if (level.getEvictionPolicy() == LRU) block.timestamp = 0;
 
                 break;
             }
@@ -90,12 +81,12 @@ std::vector<int> cacheHierarchy::handleTrace(TraceOperation op,
         cycles += chunksToTransfer * processorCyclesForMM;
 
         auto& level = cacheLevels.front();
-        int index = (address >> level.getBlockOffsetBits()) &
-                    ((1ULL << level.getSetIndexBits()) - 1);
-        uint64_t tag =
+        uint32_t tag =
             address >> (level.getBlockOffsetBits() + level.getSetIndexBits());
 
-        bool evictedDirty = level.setCacheBlock(index, tag, op);
+        CacheBlock block = {tag, op == TraceOperation::WRITE, true, 0};
+
+        bool evictedDirty = setCacheBlock(0, address, block);
         if (evictedDirty) {
             cycles += chunksToTransfer * processorCyclesForMM;
         }
@@ -158,16 +149,21 @@ cacheLevel::cacheLevel(const toml::table& cacheConfig) {
         std::vector<CacheBlock>(blocksPerSet, {0, false, false, 0}));
 }
 
-bool cacheLevel::setCacheBlock(int index, uint64_t tag, TraceOperation op) {
-    auto& set = cacheSets[index];
+bool cacheHierarchy::setCacheBlock(int cacheLevel, uint32_t address,
+                                   CacheBlock block) {
+    if (cacheLevel >= static_cast<int>(cacheLevels.size())) return block.dirty;
+
+    auto& level = cacheLevels[cacheLevel];
+
+    int index = (address >> level.getBlockOffsetBits()) &
+                ((1ULL << level.getSetIndexBits()) - 1);
+
+    auto& set = level.getCache()[index];
     int oldestIdx = 0;
 
     for (size_t i = 0; i < set.size(); ++i) {
         if (!set[i].valid) {
-            set[i].tag = tag;
-            set[i].valid = true;
-            set[i].timestamp = 0;
-            if (op == TraceOperation::WRITE) set[i].dirty = true;
+            set[i] = block;
             return false;
         }
         if (set[i].timestamp > set[oldestIdx].timestamp) {
@@ -175,10 +171,13 @@ bool cacheLevel::setCacheBlock(int index, uint64_t tag, TraceOperation op) {
         }
     }
 
-    set[oldestIdx].tag = tag;
-    set[oldestIdx].valid = true;
-    set[oldestIdx].dirty = (op == TraceOperation::WRITE);
-    set[oldestIdx].timestamp = 0;
+    auto& evictedBlock = set[oldestIdx];
+    uint32_t evictedAddress =
+        (evictedBlock.tag << (level.getSetIndexBits() +
+                              level.getBlockOffsetBits())) |
+        (index << level.getBlockOffsetBits());
 
-    return set[oldestIdx].dirty;
+    set[oldestIdx] = block;
+
+    return setCacheBlock(cacheLevel + 1, evictedAddress, evictedBlock);
 }

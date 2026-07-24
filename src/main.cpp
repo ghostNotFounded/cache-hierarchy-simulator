@@ -38,7 +38,9 @@ int main(int argc, char** argv) {
     std::cout << "Total loads:      " << traceHandler.getTotalLoads()
               << std::endl;
     std::cout << "Total stores:     " << traceHandler.getTotalStores()
+              << std::endl
               << std::endl;
+
     std::cout << "Load hits:        " << traceHandler.getLoadHits()
               << std::endl;
     std::cout << "Load misses:      " << traceHandler.getLoadMisses()
@@ -46,7 +48,30 @@ int main(int argc, char** argv) {
     std::cout << "Store hits:       " << traceHandler.getStoreHits()
               << std::endl;
     std::cout << "Store misses:     " << traceHandler.getStoreMisses()
+              << std::endl
               << std::endl;
+
+    std::cout << "Hit Rate:         "
+              << static_cast<double>(traceHandler.getLoadHits() +
+                                     traceHandler.getStoreHits()) /
+                     (traceHandler.getTotalLoads() +
+                      traceHandler.getTotalStores())
+              << std::endl;
+
+    std::cout << "Miss Rate:        "
+              << static_cast<double>(traceHandler.getLoadMisses() +
+                                     traceHandler.getStoreMisses()) /
+                     (traceHandler.getTotalLoads() +
+                      traceHandler.getTotalStores())
+              << std::endl
+              << std::endl;
+
+    std::cout << "AMAT:             "
+              << static_cast<double>(traceHandler.getTotalCycles()) /
+                     (traceHandler.getTotalLoads() +
+                      traceHandler.getTotalStores())
+              << std::endl;
+
     std::cout << "Total cycles:     " << traceHandler.getTotalCycles()
               << std::endl;
     return 0;
